@@ -1,0 +1,676 @@
+---
+title: "Análisis del perfil vocacional de estudiantes de bachillerato para carreras de STEAM-SCRUB"
+author: "Evelyn Alejandra Morales Remache"
+date: "2024-12-09"
+output: pdf_document
+lang: "es"
+toc: yes
+---
+\newpage
+# Paquetes utilizados
+
+```{r librerias}
+#### Instala 
+#install.packages("readxl") 
+#install.packages("ggplot2")
+
+#### Carga 
+library(readxl)             
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+```
+
+
+# Importar base de datos original
+
+```{r base de datos original} 
+
+datosoriginal <- read_excel("datosoriginal.xlsx")
+
+```
+
+# Pre-procesamiento de los datos
+
+
+```{r}
+head(datosoriginal)
+```
+
+Vamos a eliminar las columnas que se puso de notas para el cuestionario.
+
+```{r eliminar columnas inesesarias}
+datos <- datosoriginal[,-c(1:5,79:88)]
+head(datos)
+
+```
+
+Ahora para limpiar los datos vamos a cambiar primero elnombre de las colunnas
+
+```{r}
+colnames(datos) <- c("edad", "edad_otro", "genero", "tipo_institucion", "otro_tipo_inst", "area", "tipo_bachillerato", "tipo_b_tecnico", "año_escolar", "idiomas", "español", "ingles", "otro", "cual_otro_idioma", "nivel_educativo_padres", "ingreso", "intereses", "i_herramientas", "i_bricolaje", "i_mecanica", "i_seres_vivos", "i_ingenieria", "i_investigar", "i_ajedrez", "i_futuristas", "i_misterios", "i_detectives", "i_productos_artisticos", "i_arte", "i_musica", "Interes_ninguno", "habilidades", "h_analizar_datos", "h_aprender_ciencia", "h_explorar_tecnologias", "h_resolver_con_software", "h_dispositivos_practicos", "h_resolver_creatividad", "h_crear_arte", "h_retroalimentacion_arte", "h_estadistica", "h_problemas_matematicas", "habilidades_ninguna", "asignaturas_que_disfruta", "d_matematicas", "d_biologia", "d_fisica", "d_quimica", "d_tecnologia", "d_arte", "d_otro", "d_otra_asignatura", "carreras", "otra_carrera", "q_influye_desicion", "maestros", "amigos", "apoyo", "obstaculos", "o_recursos", "o_apoyo_familiar", "o_dificultad_materias", "o_motivacion", "o_otro", "o_cual_otro", "sector_trabajo", "carrera_tecnologia", "carrera_economia", "impacto_social", "innovaciones_tec", "area_importante_atec", "elegir_carrera_steam", "informado_steam")
+
+colnames(datos)
+```
+
+Una ves cambiado los nombres vamos a ver los valores faltantes de cada columna, conociendo que nuestro total de datos son 481.
+
+```{r valores faltantes}
+colSums(is.na(datos))
+```
+
+La variable otro_tipo_inst tiene 481 valores faltantes por lo cual lo vamos a eliminar.
+
+```{r}
+datos<-datos[,!(names(datos) %in% "otro_tipo_inst")]
+
+```
+
+
+## Análisis de variable por variable
+
+Ahora analizaremos las variables para ver si presentan alguna anomalía
+## 1. variable edad
+
+
+Ahora bien debemos unir edad y edad_otro para crear la variable "EDAD"
+
+```{r var edad}
+# Reemplazar la opción otro en la columna edad por NA
+datos$edad[datos$edad == "otro"] <- NA
+
+# Convertir la var edad a numérica puesto que estaba en chr
+datos$edad <- as.numeric(as.character(datos$edad))
+
+# Rellenar los valores NA de la columna edad con los valores de edad_otro
+datos$edad[is.na(datos$edad)] <- datos$edad_otro[is.na(datos$edad)]
+
+#eliminamos edad otro
+datos<- datos[,-2]
+#
+```
+
+Realizamos el diagrama de bigotes para ver datos atipicos
+```{r edad}
+ggplot(datos, aes(x = "", y = edad)) + 
+  geom_boxplot(fill = "lightblue", color = "black") + 
+  labs(title = "Boxplot de la Edad", y = "Edad") +
+  theme_minimal() + 
+  theme(axis.title.x = element_blank())
+```
+Como observamos dos valores que son distintos una observacion con edad 19 y una con 14 pero evidentemente estos datos no son influyentes por lo cual no se los elimina.
+
+
+## 2. Genero
+Cambiamos la variable genero a factor para que al realizar un modelo de regresión lo reconozca como categórica y genere las dumys correspondientes
+
+```{r genero}
+
+str(datos$genero)
+# transformamos la variable a factor
+datos$genero <- factor(datos$genero)
+
+#especificar la categoria de referencia
+#datos$genero <- relevel(datos$genero, ref = "Femenino")
+str(datos$genero)
+```
+En esta variable categorica no se evidencia ninguna anomalia
+
+## 3. Ahora vamos con la variable tipo_institución 
+
+```{r tipo institucion}
+str(datos$tipo_institucion)
+# transformamos la variable categórica a factor 
+datos$tipo_institucion<-factor(datos$tipo_institucion)
+
+#grafico de barras
+ggplot(datos, aes(x = tipo_institucion)) +
+  geom_bar(aes(fill = tipo_institucion), color = "white") +  # Asignar un color diferente a cada categoría
+  labs(title = "Distribución de Tipos de Institución",
+       x = "Tipo de Institución",
+       y = "Frecuencia") +
+  scale_fill_brewer(palette = "Paired")+
+    theme_minimal()
+
+```
+Se evidencia en esta variable un error puesto que se encuesto solo a una institución fiscomisional y dos publicas por lo cual vamos a revisar eso datos que tienen la categoría privada.
+
+```{r}
+#filtramos
+inst_privada <- subset(datosoriginal, datosoriginal$`3. Institución educativa:` == "Privada")
+
+# Imprimir el resultado
+print(inst_privada)
+
+```
+Se puede observar que son tres observaciones que registran estar en una institución privada, la observación realizada en 29 de noviembre corresponde a la institución publica, esto coincide con las fechas en la que se aplico la encuesta. Lo que se puede observar aquí es que es posible que la estudiante iba a seleccionar publica pero por hacerlo rápido selecciono privada, por lo cual vamos a cambiar el dato por la opción pública .
+
+
+La segunda observación, el estudiante menciona que estudia en bachillerato técnico en mecánica, tiene 17 años y realizó la encuesta el 27 de noviembre a las 12:56 p.m. Evidentemente, esta encuesta se realizó a tercero de bachillerato en mecánica de la institución fiscomisional, puesto que ese fue el horario asignado a ese paralelo por el vicerrector.
+
+La tercera observación empezó el 26, Al haber iniciado el 26 significa que fue una institución pública, la cuales solo tienen bachillerato en ciencias y al tener 17 años debe estar almenos en segundo de bachillerato.
+
+
+
+```{r corregir observaciones}
+# estudiante institución pública 
+datos[235,]
+datos$tipo_institucion[235] <- "Pública"
+
+# Estudiante de institución fiscomicional
+datos[193, ] # verificar el numero de fila
+datos$tipo_institucion[193] <- "Fiscomisional"
+datos$año_escolar[193] <- "Tercero de bachillerato"
+
+# eliminar observación
+datos[228,]
+datos$tipo_institucion[228] <- "Pública"
+datos$año_escolar[228] <- "Tercero de bachillerato"
+datos$tipo_bachillerato[228] <- "Bachillerato en ciencias"
+
+
+#grafico de barras
+ggplot(datos, aes(x = tipo_institucion)) +
+  geom_bar(aes(fill = tipo_institucion), color = "white") +  # Asignar un color diferente a cada categoría
+  labs(title = "Distribución de Tipos de Institución",
+       x = "Tipo de Institución",
+       y = "Frecuencia") +
+  scale_fill_brewer(palette = "Paired")+
+    theme_minimal()
+
+```
+
+
+## 4.Área
+
+```{r}
+ggplot(datos, aes(x = "", fill = area)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar(theta = "y") +
+  theme_void() +
+  labs(title = "Distribución de la Variable Area") +
+  geom_text(aes(label = scales::percent(..count../sum(..count..))),
+            stat = "count", position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette = "Paired")
+```
+En esta variable no hay ningún error 
+
+
+## 5. tipo bachillerato
+
+```{r}
+#grafico de barras
+ggplot(datos, aes(x = tipo_bachillerato)) +
+  geom_bar(aes(fill = tipo_bachillerato), color = "white") +  # Asignar un color diferente a cada categoría
+  labs(title = "Distribución de tipo de bachillerato",
+       x = "Tipo de Bachillerato",
+       y = "Frecuencia") +
+  scale_fill_brewer(palette = "Paired")+
+    theme_minimal()
+```
+No se evidencia ninguna anomalía
+
+
+## 6 tipo de bachillerato tecnico
+```{r}
+
+library(scales)
+ggplot(datos, aes(x = "", fill = tipo_b_tecnico)) +
+  geom_bar(width = 1, stat = "count") +  # Crear barras de conteo
+  coord_polar(theta = "y") +  # Convertir las barras en gráfico de pastel
+  theme_void() +  # Eliminar ejes y fondo
+  labs(title = "Distribución tipo bachillerato técnico") +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(12, "Paired"))(length(unique(datos$tipo_b_tecnico)))) +
+  theme(legend.position = "right") +  # Mover la leyenda
+  guides(fill = guide_legend(title = "Tipo de Bachillerato"))
+```
+
+Aquí solo hay dos tipos de bachillerato: Mecánica (Electromecánica automotriz) y Contabilidad, por otra parte un estudiante a puesto BJU lo cual es sinónimo de bachillerato en ciencias por lo cual vamos a corregir esto. Por otra parte los valores NA son los estudiantes que estudian bachillerato en ciencias asi que pondremos en es campo NA la palabra ciencias.
+
+```{r var tipo de bachillerato tecnico}
+
+# Remplazar los campos relacionados con mecánica por Electromecánica_Automotriz
+
+datos$tipo_b_tecnico <- gsub("Bachillerato Electromecánica", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Bachillerato tectinco electromecánica", "Mecánica", datos$tipo_b_tecnico)
+
+datos$tipo_b_tecnico <- gsub("Electro mecánica automotriz", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Electrómecánica Automotriz", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Electromecánica automotriz", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Electromecanica", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Electromecánica", "Mecánica", datos$tipo_b_tecnico)
+
+datos$tipo_b_tecnico <- gsub("Electromecánico", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Mecánica", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Mecanica", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("Mecánico", "Mecánica", datos$tipo_b_tecnico)
+datos$tipo_b_tecnico <- gsub("MECÁNICA", "Mecánica", datos$tipo_b_tecnico)
+
+# Bachillerato en contabilidad una sola categoria
+datos$tipo_b_tecnico <- gsub("contabilidad", "Contabilidad", datos$tipo_b_tecnico)
+# Bachillerato ciencias
+datos <- datos %>%
+  mutate(tipo_b_tecnico = ifelse(is.na(tipo_b_tecnico), "Ciencias", tipo_b_tecnico))
+
+```
+
+Ahora corrijamos el dato que esta escrito BGU el cual debió haber seleccionado bachillerato en ciencias, puesto que BGU es bachillerato general unificado sinónimo de Bachillerato en Ciencias.
+
+```{r}
+datos[48,]
+datos$tipo_bachillerato[48]<- "Bachillerato en ciencias"
+# cambiar Bgu por ciencias
+datos$tipo_b_tecnico <- gsub("Bgu","Ciencias", datos$tipo_b_tecnico )
+datos[48,]
+
+ggplot(datos, aes(x = "", fill = tipo_b_tecnico)) +
+  geom_bar(width = 1, stat = "count") +  # Crear barras de conteo
+  coord_polar(theta = "y") +  # Convertir las barras en gráfico de pastel
+  theme_void() +  # Eliminar ejes y fondo
+  labs(title = "Distribución tipo bachillerato técnico") +
+  geom_text(aes(label = scales::percent(..count.. / sum(..count..))),
+            stat = "count", position = position_stack(vjust = 0.5), color = "black") +  # Agregar los porcentajes
+  scale_fill_brewer(palette = "Paired")
+```
+Listo esos son los 3 tipos de bachilleratos que se tiene
+
+
+## 7 Año escolar en el que se encuentra
+```{r nivel de bachillerato}
+ggplot(datos, aes(x = año_escolar, fill = año_escolar)) +
+  geom_bar(color = "white") +  # Contorno negro para las barras
+  labs(
+    title = "Distribución de Año Escolar",
+    x = "Año Escolar",
+    y = "Frecuencia"
+  ) +
+  scale_fill_brewer(palette = "Paired") +  # Paleta de colores 
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none")
+
+```
+En esta variable no hay ninguna anomalía.
+
+
+## 8 idiomas que habla, evidentemente 
+
+Al estar e ecuador y estudiar en una Unidad Educativa de este país evidentemente todos los estudiantes deben habla español.
+```{r español}
+datos$español[datos$español == 0] <- 1
+
+```
+
+
+## 9 Nivel educativo padres 
+
+```{r}
+ggplot(datos, aes(x = nivel_educativo_padres, fill = nivel_educativo_padres)) +
+  geom_bar(aes(y = ..count..), color = "white", width = 0.7) +  # Frecuencia en el eje y
+  geom_text(# Porcentajes en las barras
+    stat = "count",
+    aes(label = scales::percent(..count.. / sum(..count..), accuracy = 0.1), y = ..count..),
+    position = position_stack(vjust = 0.5),
+    size = 4
+  ) +  
+  scale_fill_brewer(palette = "Paired") + 
+  labs(
+    title = "Nivel Educativo de los Padres",
+    x = "Nivel Educativo",
+    y = "Frecuencia"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.position = "none"  # Oculta la leyenda
+  )
+```
+Continuamos con la siguiente variable
+
+
+## ingreso
+
+```{r var ingreso}
+ggplot(datos, aes(x = ingreso, fill = ingreso)) +
+  geom_bar(aes(y = ..count..), color = "white", width = 0.7) +  # Frecuencia en el eje y
+  geom_text(
+    stat = "count",
+    aes(label = scales::percent(..count.. / sum(..count..), accuracy = 0.1), y = ..count..),
+    position = position_stack(vjust = 0.5),
+    size = 4
+  ) +  # Porcentajes en las barras
+  scale_fill_brewer(palette = "Paired") +  # Paleta de colores atractivos
+  labs(
+    title = "Distribución de Ingreso",
+    x = "Ingreso",
+    y = "Frecuencia"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.position = "none"  # Oculta la leyenda
+  )
+```
+Ninguna anomalia
+
+
+## 10 Intereses
+```{r}
+str(datos[14:29])
+```
+no hay ninguna anomalía 
+
+
+## 11 Habilidades
+```{r}
+str(datos[30:41])
+```
+No hay ninguna anomalía 
+
+
+## 12 Asignaturas que disfruta en el colegio
+
+```{r}
+str(datos[42:50])
+```
+En esta pregunta se puede observar que en la variable d_otra asignatura se tiene varias categorías vamos a revisar estas para poder limpiar la variable.
+
+```{r asignaturas}
+
+
+ggplot(datos, aes(x = "", fill = d_otra_asignatura)) +
+  geom_bar(width = 1, stat = "count") +  # Crear barras de conteo
+  coord_polar(theta = "y") +  # Convertir las barras en gráfico de pastel
+  theme_void() +
+  geom_text(aes(label = scales::percent(..count.. / sum(..count..))),
+            stat = "count", position = position_stack(vjust = 0.5), color = "black") +  # Agregar los porcentajes
+  scale_fill_manual(values = colorRampPalette(brewer.pal(12, "Paired"))(length(unique(datos$d_otra_asignatura))))
+
+```
+En primer lugar podemos observar que hay una estudiante que a puesto en otra asignatura química la cual si estaba dentro de la opciones categóricas,  Asimismo un estudiante ha escrito Tics y esta opción se asocia con la asignatura Teologiza.  Por otra parte de las otras categorías tenemos: Idiomas, Educación física(deportes), lengua y literatura, historia, emprendimiento y gestión y asignaturas de bachillerato técnico. Identificados estas observaciones procedemos a ordenar estos datos. Ahora bien hay estudiantes que has escrito hasta 3 otras asignaturas por lo cual se ha creado la siguiente categoría "Ciencias sociales y Humanidades" abreviada (CSH) en la cual van las asignaturas de: idiomas, ingles, redacción, Lengua y literatura, historia y filosofía y a la asignatura Educación física la llamaremos deportes que es mas conocida en cualquier contexto, la asignatura de prendimiento y gestión junto con contabilidad, la llamaremos ciencias económicas y administrativas abreviada(CEA)  y finalmente a las asignaturas de bachillerato técnico las llamaremos Materias_Técnicas.
+
+```{r}
+# Observación que ingreso TICs
+datos[24,]
+
+datos$d_tecnologia[24]<-1
+datos$d_otra_asignatura[24] <-NA
+
+# Observación que ingreso química
+
+datos[133,]
+datos$d_quimica[133]<-1
+datos$d_otra_asignatura[133] <-NA
+
+# categorías
+# Convertir todo a minúsculas
+datos$d_otra_asignatura <- tolower(datos$d_otra_asignatura)  
+datos$d_otra_asignatura <- gsub("educación física", "Deportes", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("educación fisica", "Deportes", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("educasion fisica", "Deportes", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("educación física", "Deportes", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("educación fisica", "Deportes", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("todas", "Deportes", datos$d_otra_asignatura)
+
+datos$d_otra_asignatura <- gsub("historia y problemas del mundo contemporáneo", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("filosofía y lengua y literatura", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("lengua y literatura. inglés", "CSH", datos$d_otra_asignatura)
+
+datos$d_otra_asignatura <- gsub("lenguaje e historia", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("lengua y literatura", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("lectura crítica", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("csh", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("idiomas", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("ingles", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("inglés", "CSH", datos$d_otra_asignatura)
+
+datos$d_otra_asignatura <- gsub("lengua", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("filosofia", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("historia", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("redaccion", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("filosofía", "CSH", datos$d_otra_asignatura)
+
+datos$d_otra_asignatura <- gsub("estudios sociales", "CSH", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("emprendimiento y gestion", "CEA", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("empledimiento y gestión", "CEA", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("contabilidad", "CEA", datos$d_otra_asignatura)
+
+
+datos$d_otra_asignatura <- gsub("CSH y CSH", "CSH", datos$d_otra_asignatura)
+
+datos$d_otra_asignatura <- gsub("sistemas de seguridad y confort del vehículo automovil", "Materias_Técnicas", datos$d_otra_asignatura)
+datos$d_otra_asignatura <- gsub("sistemas eléctricos", "Materias_Técnicas", datos$d_otra_asignatura)
+
+
+# Graficos
+ggplot(datos, aes(x = "", fill = d_otra_asignatura)) +
+  geom_bar(width = 1, stat = "count") +  # Crear barras de conteo
+  coord_polar(theta = "y") +  # Convertir las barras en gráfico de pastel
+  theme_void() +  # Eliminar ejes y fondo
+  labs(title = "Distribución Otra asignatura") +
+  geom_text(aes(label = scales::percent(..count.. / sum(..count..))),
+            stat = "count", position = position_stack(vjust = 0.5), color = "black") +  # Agregar los porcentajes
+  scale_fill_manual(values = colorRampPalette(brewer.pal(12, "Paired"))(length(unique(datos$d_otra_asignatura))))
+
+```
+Con esto hemos organizado esta variable.
+
+
+## 13 Carreras
+
+```{r}
+str(datos[51:52])
+```
+Vamos a ver los datos ingresados en otra_carrera
+
+```{r}
+unique(datos$otra_carrera)
+
+```
+ 
+Evidentemente hay una diversidad de carreras por lo cual para no perder esta informacion valiosa que sera util al explicar luego los resultados vamos a crear una nueva variable que se llame le parece atractiva una carrera STEAM si o no y para clasificar estas carrera se usara la Tabla 6.
+
+```{r}
+carreras_steam <- c("Investigador/a científico/a", "Desarrollador/a de software", 
+                    "Ingeniero/a civil", "Artista digital", 
+                    "Matemático/a o estadístico/a", "Ingeniería automotriz", "Astronomo", "Ingeniería Química", "astronomia o astrologia", "Ingeniero industrial", "Medicina", "Ingenieria aeroespacial o robotica", "Medicina forense", "Biologa", "Medicina o veterinaria", "Medicina veterinaria", "Arquitectura", "Ingeniería industrial", "Médico", "Farmacéutica", "medicina", "Veterinaria/ atención prehospitalaria", "Médico veterinario", "Medicina, Criminología", "Veterinaria y mecánica", "Ingeniería mecánica", "Mecánico automotriz", "Ingenieria industrial", "Ingeniero Mecánico", "Electromecánica", "Mecánica", "Artes", "Ingeniero en mecánica automotriz", "Mecanica", "biología marina", "Biología marina", "Ingeniero en sistemas", "Ingeniería en sistemas", "Piloto de aviación", "Derecho o Medicina", "Medicina Veterinaria", "Diseño industrial","Eléctrica mecatrónica", "Enfermería", "medicina -criminalista", "Veterinaria", "Enfermeria", "Astronomía ,psicología,filosofía,diseño de modas", "Ingeniero automotriz", "Ingeniero electromecánico o mecatronico", "Ingeniería en mecánica", "Medicina General", "Mecánica automotriz", "Veterinario o ingeniero agronomo", "Veterinario", "Ingeniero es sistemad", "Licenciada en enfermería", "Veterinaria especialidad en equinos", "Doctora", "Todas aquellas, otras igual, medicina, militar, etc, entre ellas igual si me gustan las opciones que me dieron y las quiero hacer", "Licen de Matemática", "Matemática")
+
+# Crear la nueva variable de si le atrae las carreras Steam la cual es binaria
+datos$carrera_steam<- ifelse(datos$carreras %in% carreras_steam | datos$otra_carrera %in% carreras_steam, 1, 0)
+
+head(datos)
+
+```
+
+
+
+
+
+## 14. ¿Quién influye más en tu decisión sobre qué estudiar en el futuro?
+
+```{r }
+unique(datos$q_influye_desicion)
+```
+
+No hay valores NA ni ninguna anomalía pasamos a la siguiente pregunta.
+
+## 15. ¿Tus maestros te han animado a explorar temas relacionados con la ciencia o la tecnología?
+
+
+
+```{r }
+unique(datos$maestros)
+```
+No hay valores NA ni ninguna anomalía pasamos a la siguiente pregunta.
+
+## 16. ¿Qué opinan tus amigos sobre el estudio de disciplinas relacionadas con la tecnología o la ciencia?
+
+```{r }
+unique(datos$amigos)
+```
+No hay valores NA ni ninguna anomalía pasamos a la siguiente pregunta.
+
+## 17. ¿Qué tanto apoyo recibes de tu familia para estudiar temas relacionados con las matemáticas o la ciencia?
+
+```{r }
+unique(datos$apoyo)
+```
+No hay valores NA ni ninguna anomalía pasamos a la siguiente pregunta.
+
+## 18. ¿Qué obstáculos sientes que podrías enfrentar al seguir una de estas carreras (Ciencia, tecnología, ingeniería, Arte y Matemáticas)?
+```{r obtaculos}
+str(datos[57:63])
+
+```
+En esta pregunta se debe analizar la variable o_cual_otro
+
+```{r categorias de la variable o_cual_otro}
+unique(datos$o_cual_otro )
+```
+En esta variable se identifica tress categorías lo económico, nada y simplemente el no interés en carreras STEAM Preferencias (no me gusta) y ojo "falta de money y atención tengo tdha" El trastorno por déficit de atención e hiperactividad (TDAH)
+
+```{r}
+
+# Obstaculo lo economico
+obtaculoseconomicos <- c( "Falta de recursos económicos", "No apoyo" ,"falta de money y atencion tengo tdha", 
+               "Falta de dinero", "FALTA DE DINERO", "Economía", "Económico", "Economia",
+               "No tener recursos suficientes", "No tengo recuerdos suficientes", "Apoyo", 
+               "Por falta de recursos económicos", "Tener los materiales ,que sean solicitados", 
+               "Falta monetareamemte")
+
+# Aplicar el reemplazo en la columna obstáculos de la base de datos
+datos$o_cual_otro <- gsub(paste(obtaculoseconomicos, collapse = "|"), "Economico", datos$o_cual_otro)
+
+
+# Vamos con no me gusta
+obstaculoPreferencias <- c( "No me agrada la matemáticas, ingeniería, tecnología", 
+               "No voy a seguir ninguna d esas carreras", 
+               "No me gusta", "No me gusta mucho", "Falta de interés", "Porque mi carrera es ser militar", "Falta de interes")
+
+datos$o_cual_otro <- gsub(paste(obstaculoPreferencias, collapse = "|"), "Preferencias", datos$o_cual_otro)
+
+# Ningún obstáculo
+
+obtaculoNinguno<- c( "Nada", "Ninguno", "Nanda")
+
+datos$o_cual_otro <- gsub(paste(obtaculoNinguno, collapse = "|"), "Ninguno", datos$o_cual_otro)
+
+
+
+# Obstáculos Personales
+
+obstaculosPersonales <- c( "Problemas familiares", 
+                "Tiempo", "otros", "Soy un poco dejado", "El lugar de residencia", 
+                "Organizacion del tiempo", "La indecisión", "No especifica")
+
+datos$o_cual_otro <- gsub(paste(obstaculosPersonales, collapse = "|"), "Personales", datos$o_cual_otro)
+
+unique(datos$o_cual_otro )
+
+```
+
+Con esto se ha terminado con esta variable
+
+## 19. ¿Qué sectores te interesan más para trabajar en el futuro?
+
+```{r }
+unique(datos$sector_trabajo)
+```
+No hay ninguna anomalía
+
+## 20. ¿Qué tan optimista te sientes sobre tu futuro en una carrera que involucre tecnología o ciencia?
+
+
+```{r }
+unique(datos$carrera_tecnologia)
+```
+No hay ninguna anomalía
+
+## 21. ¿Crees que tu carrera te brindará estabilidad económica?
+
+
+```{r }
+unique(datos$carrera_economia)
+```
+No hay ninguna anomalía
+
+## 22. ¿Qué esperas lograr con tu carrera en términos de impacto social o tecnológico?
+
+```{r }
+unique(datos$impacto_social)
+```
+No hay ninguna anomalía
+
+
+## 23. ¿Crees que las innovaciones tecnológicas están mejorando la calidad de vida de las personas?
+
+```{r }
+unique(datos$innovaciones_tec)
+```
+No hay ninguna anomalía
+
+## 24 ¿Qué área consideras más importante para que avance tecnológicamente?
+
+```{r }
+unique(datos$area_importante_atec)
+```
+No hay ninguna anomalía
+
+
+## 25 ¿Cuál es la probabilidad de que selecciones una carrera relacionada con Ciencia, Tecnología, Ingeniería, Arte o Matemáticas (STEAM)?
+```{r }
+unique(datos$elegir_carrera_steam)
+```
+No hay ninguna anomalía
+
+
+## 26. ¿Qué tan informado/a te sientes sobre las diferentes opciones de carrera dentro de las áreas de Ciencia, tecnología, ingeniería, Arte y Matemáticas (STEAM)?
+
+```{r }
+unique(datos$informado_steam)
+```
+No hay ninguna anomalía
+
+# Estructura final
+
+```{r}
+str(datos)
+```
+
+ 
+## Convertir variables chr a Factor(categoricas)
+
+```{r}
+# librería usada
+library(dplyr)
+
+# Convertir las columnas de tipo 'chr' a 'factor'
+datos <- datos %>%
+  mutate(across(where(is.character), as.factor))
+
+# Ver la estructura después de 
+str(datos)
+```
+
+Con esto los datos estas lintos para realizar el modelo y análisis estadístico.
+
+
+# Importar bd limpia
+
+```{r para importar bd depurada }
+colnames(datos)
+write.csv(datos, "datos.csv", row.names = FALSE, fileEncoding = "UTF-8")
+```
+
+
+Jesús mi capitán

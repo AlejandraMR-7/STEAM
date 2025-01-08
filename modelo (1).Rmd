@@ -1,0 +1,447 @@
+---
+title: "Modelado"
+output:
+  pdf_document: default
+  html_document: default
+date: "2024-12-19"
+---
+# Paquetes utilizados
+
+```{r librerias}
+#### Instala 
+#install.packages("readxl") 
+#install.packages("ggplot2")
+#install.packages("tidyr")
+#install.packages("GGally")
+#install.packages("vcd")}
+#install.packages("lmtest")
+# install.packages("zoo")
+#### Carga 
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(tidyr)
+library(patchwork)  # Para combinar gráficos
+library (lmtest)
+library(zoo)
+```
+
+
+# Importar base de datos depurada
+
+```{r base de datos original} 
+
+datos <- read.csv("/cloud/project/datos.csv")
+
+# librería usada dplyr
+
+# Convertir las columnas de tipo chr a factor
+datos <- datos %>%
+  mutate(across(where(is.character), as.factor))
+
+
+
+# Recodificar la variable correctamente
+# Recodificar manualmente con factor() 
+datos$elegir_carrera_steam_codificada <- factor(datos$elegir_carrera_steam, 
+                                                 levels = c("Nada", "Poco", "Algo", "Bastante", "Mucho"),
+                                                 labels = c(1, 2, 3, 4, 5))
+
+datos$elegir_carrera_steam_codificada <- as.numeric(as.character(datos$elegir_carrera_steam_codificada))
+
+
+
+# Verificar la codificación
+table(datos$elegir_carrera_steam_codificada)
+
+```
+
+# Variable Endogena
+
+```{r}
+
+# Sumar intereses con los pesos correspondientes
+datos$intereses_suma <- 1 * datos$i_ingenieria + 2 * datos$i_mecanica + 3 * datos$i_herramientas + 
+                        1 * datos$i_ajedrez + 3 * datos$i_futuristas + 3 * datos$i_misterios + 
+                        3 * datos$i_detectives + 1 * datos$i_productos_artisticos +
+                        3 * datos$i_seres_vivos + 2 * datos$i_investigar + 1 * datos$i_arte + 
+                        1 * datos$i_musica + 3 * datos$i_bricolaje
+
+# Ajustar las habilidades con pesos
+datos$habilidades_suma <- 3 * datos$h_problemas_matematicas + 3 * datos$h_resolver_con_software + 
+                          2 * datos$h_estadistica + 3 * datos$h_analizar_datos + 
+                          1 * datos$h_resolver_creatividad + 3 * datos$h_explorar_tecnologias +
+                          1 * datos$h_crear_arte + 1 * datos$h_retroalimentacion_arte +
+                          2 * datos$h_dispositivos_practicos + 1 * datos$h_aprender_ciencia
+
+# Ponderaciones para los componentes de Afinidad_STEAM
+peso_intereses <- 0.4
+peso_habilidades <- 0.4
+peso_carrera_steam <- 0.1
+peso_elegir_carrera_steam <- 0.1
+
+# Recalcular Afinidad_STEAM con ponderaciones ajustadas
+datos$Afinidad_STEAM <- (peso_intereses * datos$intereses_suma) + 
+                        (peso_habilidades * datos$habilidades_suma) + 
+                        (peso_carrera_steam * datos$carrera_steam) + 
+                        (peso_elegir_carrera_steam * datos$elegir_carrera_steam_codificada)
+summary(datos$Afinidad_STEAM)
+
+```
+
+
+```{r}
+
+library(ggplot2)
+library(patchwork)
+
+# Gráfico de dispersión
+scatter_plot <- ggplot(datos, aes(x = Afinidad_STEAM, y = genero, color = genero)) +
+  geom_jitter(width = 0.2, size = 3) + # evitar superposición
+  labs(title = "Afinidad STEAM por Género",
+       x = "Afinidad STEAM",
+       y = "Género") +
+  theme_minimal() + theme(legend.position = "none")+
+  scale_color_brewer(palette = "Set1")
+
+# Calcular media y desviación estándar
+mean_value <- mean(datos$Afinidad_STEAM)
+std_dev <- sd(datos$Afinidad_STEAM)
+print(mean_value)
+print(std_dev)
+
+# Gráfico de histograma con densidad
+histogram_plot <- ggplot(datos, aes(x = Afinidad_STEAM)) + 
+  geom_histogram(aes(y = ..density..), 
+                 bins = 20,            # Número de barras
+                 fill = "#66C2FF",     # Azul pastel (Ciencia/Teconología)
+                 color = "#3399FF",    # Borde azul más fuerte (tecnología)
+                 alpha = 0.7) +        # Transparencia de las barras
+  geom_density(color = "#FF8C00", size = 1.5) +  # Línea de densidad en naranja (creatividad)
+  labs(title = "Distribución Afinidad STEAM", 
+       x = "Valores", 
+       y = "Densidad") + 
+  theme_minimal()
+
+# Combinar ambos gráficos
+scatter_plot + histogram_plot
+
+
+```
+
+
+
+
+
+
+# variables explicativas
+
+```{r}
+
+datos$suma_asignaturas <- datos$d_matematicas + datos$d_biologia + datos$d_fisica + datos$d_quimica + datos$d_tecnologia + datos$d_arte
+
+# Modificar la variable idiomas
+datos <- datos %>%
+  mutate(idiomas = ifelse(idiomas == "Ingres", "Español Inglés", idiomas))
+
+datos$suma_obstaculos<- datos$o_recursos+datos$o_apoyo_familiar+datos$o_motivacion+ datos$o_dificultad_materias
+
+levels(datos$q_influye_desicion)
+# Redefinir la categoría de referencia
+datos$nivel_educativo_padres <- factor(datos$nivel_educativo_padres, 
+                                       levels = c("Primaria", "Bachillerato", "Secundaria", "Universidad", "Postgrado"))
+
+# Redefinir la categoría de referencia para la variable 
+datos$apoyo <- factor(datos$apoyo, levels = c("Nada", "Poco", "Algo", "Bastante", "Mucho"))
+# Cambiar la categoría de referencia de la variable maestros a "Nunca"
+datos$maestros <- relevel(datos$maestros, ref = "Nunca")
+
+# Verificar los niveles de la variable
+levels(datos$amigos)
+
+# Cambiar la categoría de referencia 
+datos$q_influye_desicion <- relevel(datos$q_influye_desicion, ref = "Nadie en particular")
+
+# Cambiar la categoría de referencia 
+datos$informado_steam<- relevel(datos$informado_steam, ref = "Nada informado/a")
+
+# Cambiar la categoría de referencia 
+datos$carrera_tecnologia<- relevel(datos$carrera_tecnologia, ref = "Nada optimista")
+```
+
+
+
+
+# Modelo
+
+```{r}
+# Ajustar el modelo de regresión múltiple
+modelo_ols <- lm(Afinidad_STEAM ~ edad+area, data = datos)
+
+
+modelo1<- lm(Afinidad_STEAM ~ edad + genero + tipo_institucion + nivel_educativo_padres + suma_asignaturas,data = datos)
+summary(modelo1)
+
+modelo2<- lm(Afinidad_STEAM ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec,data = datos)
+summary(modelo2)
+
+modelo3<- lm(Afinidad_STEAM ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec+q_influye_desicion + o_recursos ,data = datos)
+summary(modelo3)
+
+modelo4<- lm(Afinidad_STEAM ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec+q_influye_desicion + o_recursos+ carrera_tecnologia+o_dificultad_materias+informado_steam,data = datos)
+summary(modelo4)
+
+
+modelo5<- lm(Afinidad_STEAM ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas +q_influye_desicion+o_recursos + o_dificultad_materias+ carrera_tecnologia+sector_trabajo + area_importante_atec + amigos+maestros+apoyo, data = datos)
+summary(modelo5)
+
+
+```
+
+
+```{r}
+#Entorno social 
+
+#Modelos por genero
+# Filtrar los datos para incluir solo el género Femenino
+datos_femenino <- subset(datos, genero == "Femenino")
+
+# Ajustar el modelo solo para el género Femenino
+modelo4 <- lm(Afinidad_STEAM ~tipo_institucion + nivel_educativo_padres + amigos + maestros +q_influye_desicion+ apoyo, data = datos_femenino)
+
+# Mostrar el resumen del modelo
+summary(modelo4)
+# Filtrar los datos para incluir solo el género Masculino
+datos_masculino <- subset(datos, genero == "Masculino")
+
+# Ajustar el modelo solo para el género Masculino
+modelo_masculino <- lm(Afinidad_STEAM ~tipo_institucion + nivel_educativo_padres +q_influye_desicion+ amigos + maestros + apoyo, data = datos_masculino)
+
+# Mostrar el resumen del modelo
+summary(modelo_masculino)
+
+
+```
+
+# Validacion
+
+```{r}
+
+shapiro.test(residuals(modelo1))
+shapiro.test(residuals(modelo2))
+shapiro.test(residuals(modelo3))
+shapiro.test(residuals(modelo4))
+shapiro.test(residuals(modelo5))
+shapiro.test(residuals(modelo_ols))
+
+```
+
+
+# Modelos
+
+```{r}
+# Aplicar una transformación logarítmica a la variable dependiente
+datos$Afinidad_STEAM_log <- log(datos$Afinidad_STEAM+1) 
+
+modelo1_l<- lm(Afinidad_STEAM_log ~ edad + genero + tipo_institucion + nivel_educativo_padres + suma_asignaturas,data = datos)
+summary(modelo1_l)
+
+modelo2_l<- lm(Afinidad_STEAM_log ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec,data = datos)
+summary(modelo2_l)
+modelo3_l<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec+q_influye_desicion + o_recursos ,data = datos)
+summary(modelo3_l)
+
+modelo4_l<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec+q_influye_desicion + o_recursos + carrera_tecnologia+o_dificultad_materias+informado_steam,data = datos)
+summary(modelo4_l)
+
+
+modelo5_l<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas +q_influye_desicion+o_recursos + amigos+maestros+apoyo+ carrera_tecnologia+sector_trabajo + area_importante_atec, data = datos)
+summary(modelo5_l)
+
+
+modelo6_l<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + d_quimica +d_matematicas+d_fisica+d_biologia+d_arte+d_tecnologia +area_importante_atec + q_influye_desicion + o_recursos + carrera_tecnologia,data = datos)
+summary(modelo6_l)
+
+
+
+```
+
+
+
+```{r}
+shapiro.test(residuals(modelo1_l))
+shapiro.test(residuals(modelo2_l))
+shapiro.test(residuals(modelo3_l))
+shapiro.test(residuals(modelo4_l))
+shapiro.test(residuals(modelo5_l))
+shapiro.test(residuals(modelo6_l))
+
+```
+
+
+```{r}
+boxplot(residuals(modelo6_l))
+
+colnames(datos)
+```
+
+
+```{r}
+
+# Aplicar la prueba de White de forma directa
+ bptest(modelo1_l)
+ bptest(modelo2_l)
+ bptest(modelo3_l)
+bptest(modelo4_l)
+   bptest(modelo5_l)
+    bptest(modelo6_l)
+ 
+     
+```
+
+```{r}
+library(carData)
+library(car)
+vif(modelo1_l)
+vif(modelo2_l)
+vif(modelo3_l)
+vif(modelo4_l)
+vif(modelo5_l)
+vif(modelo6_l)
+
+
+```
+
+
+```{r}
+resettest(modelo1_l, power=2, type="fitted")
+resettest(modelo2_l, power=2, type="fitted")
+resettest(modelo3_l, power=2, type="fitted")
+resettest(modelo4_l, power=2, type="fitted")
+resettest(modelo5_l, power=2, type="fitted")
+resettest(modelo6_l, power=2, type="fitted")
+
+
+```
+
+
+```{r}
+
+
+# Establecer la disposición de los gráficos en una matriz de 2 filas y 3 columnas
+par(mfrow = c(2, 3))
+
+# Crear los gráficos de influencia para cada modelo
+
+influencePlot(modelo1_l,scale=7,
+              fill.col = "#1874CD",  col="#63B8FF", 
+              pch = 16,                 
+              sub = "modelo1_l",   
+              cex.main = 1.5,               
+              cex.lab = 1,                  
+              font.main = 2,                  
+              font.lab = 2)                   
+
+influencePlot(modelo2_l, scale=7,
+              fill.col = "#1874CD",col="#63B8FF",              
+              pch = 16,                     
+              sub = "modelo2_l",   # Subtítulo
+              cex.main = 1.5,                 
+              cex.lab = 1, ylab = "",                 
+              font.main = 2,                
+              font.lab = 2)                  
+
+influencePlot(modelo3_l,scale=7,
+              fill.col = "#1874CD", col="#63B8FF",              
+              pch = 16,                    
+              sub = "modelo3_la",   # Subtítulo
+              cex.main = 1.5,                 
+              cex.lab = 1, ylab = "",                   
+              font.main = 2,                
+              font.lab = 2)                 
+
+influencePlot(modelo4_l,scale=7,
+              fill.col = "#1874CD",  col="#63B8FF",             
+              pch = 16,                       
+              sub = "modelo4_l",   # Subtítulo
+              cex.main = 1.5,             
+              cex.lab = 1,                
+              font.main = 2,                  
+              font.lab = 2)                   
+
+influencePlot(modelo5_l,scale=7,
+              fill.col = "#1874CD", col="#63B8FF",           
+              pch = 16,                
+              sub = "modelo5_l",   # Subtítulo
+              cex.main = 1.5,            
+              cex.lab = 1, ylab = "",                      
+              font.main = 2,                 
+              font.lab = 2)                   
+
+influencePlot(modelo6_l,scale=7,
+              fill.col = "#1874CD", col="#63B8FF",            
+              pch = 16,                      
+              sub = "modelo6_l",   # Subtítulo
+              cex.main = 1.5,                
+              cex.lab = 1,  ylab = "",                    
+              font.main = 2,                  
+              font.lab = 2)                   
+
+# Restaurar la configuración de gráficos a la predeterminada (una sola ventana de gráfico)
+par(mfrow = c(1, 1))
+
+
+
+```
+
+
+```{r}
+datos[c(193,4,29),]
+```
+
+
+```{r}
+
+datos1<-datos[-c(193,4,29),]
+
+modelo1_l_<- lm(Afinidad_STEAM_log ~ edad + genero + tipo_institucion + nivel_educativo_padres + suma_asignaturas,data = datos1)
+summary(modelo1_l_)
+
+
+modelo4_l_<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + suma_asignaturas+ area_importante_atec+q_influye_desicion + o_recursos + carrera_tecnologia+o_dificultad_materias+informado_steam,data = datos1)
+summary(modelo4_l_)
+
+
+modelo6_l_<- lm(Afinidad_STEAM_log  ~ edad + genero + tipo_institucion+ nivel_educativo_padres + d_quimica +d_matematicas+d_fisica+d_biologia+d_arte+d_tecnologia +area_importante_atec + q_influye_desicion + o_recursos + carrera_tecnologia,data = datos1)
+summary(modelo6_l_)
+
+```
+## Pruebas:
+```{r}
+shapiro.test(residuals(modelo1_l_))
+shapiro.test(residuals(modelo4_l_))
+shapiro.test(residuals(modelo6_l_))
+
+bptest(modelo1_l_)
+bptest(modelo4_l_)
+bptest(modelo6_l_)
+
+
+resettest(modelo1_l_, power=2, type="fitted")
+resettest(modelo4_l_, power=2, type="fitted")
+resettest(modelo6_l_, power=2, type="fitted")
+
+vif(modelo1_l_)
+vif(modelo4_l_)
+vif(modelo6_l_)
+
+```
+
+
+
+
+
+
+
+
+

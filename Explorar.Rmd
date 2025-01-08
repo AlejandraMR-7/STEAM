@@ -1,0 +1,841 @@
+---
+title: "Análisis del perfil vocacional de estudiantes de bachillerato para carreras
+  de STEAM-EXPLORE"
+author: "Evelyn Alejandra Morales Remache"
+date: "2024-12-14"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+
+
+# Paquetes utilizados
+
+```{r librerias}
+#### Instala 
+#install.packages("readxl") 
+#install.packages("ggplot2")
+#install.packages("tidyr")
+
+#### Carga 
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(tidyr)
+library(patchwork)  # Para combinar gráficos
+
+```
+
+
+# Importar base de datos depurada
+
+```{r base de datos original} 
+
+datos <- read.csv("/cloud/project/datos.csv")
+
+# librería usada dplyr
+
+# Convertir las columnas de tipo chr a factor
+datos <- datos %>%
+  mutate(across(where(is.character), as.factor))
+
+
+
+```
+
+
+
+
+# Graficos preguntas sociodemograficas 
+
+```{r  seccion 1}
+
+
+# Calcular el porcentaje para cada variable
+calcular_porcentaje <- function(df, variable) {
+  df %>%
+    group_by(!!sym(variable)) %>%
+    summarise(Frecuencia = n()) %>%
+    mutate(Porcentaje = Frecuencia / sum(Frecuencia) * 100) %>%
+    ungroup()
+}
+
+# Graficar Edad con porcentaje
+edad_porcentaje <- calcular_porcentaje(datos, "edad")
+grafico_edad <- ggplot(edad_porcentaje, aes(x = factor(edad), y = Porcentaje, fill = factor(edad))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_brewer(palette = "Pastel1") +  # Colores pastel
+  labs(title = "Edad", x = "Edad", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+# Graficar Género con porcentaje
+genero_porcentaje <- calcular_porcentaje(datos, "genero")
+grafico_genero <- ggplot(genero_porcentaje, aes(x = factor(genero), y = Porcentaje, fill = factor(genero))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_manual(values = c("Femenino" = "#FFB6C1", "Masculino" = "#ADD8E6")) +  # Colores pastel (rosa y azul)
+  labs(title = "Género", x = "Género", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+# Graficar Tipo de Bachillerato Técnico con porcentaje
+tipo_b_tecnico_porcentaje <- calcular_porcentaje(datos, "tipo_b_tecnico")
+grafico_tipo_b_tecnico <- ggplot(tipo_b_tecnico_porcentaje, aes(x = factor(tipo_b_tecnico), y = Porcentaje, fill = factor(tipo_b_tecnico))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel
+  labs(title = "Tipo de Bachillerato", x = "Tipo bachillerato", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+# Graficar Año Escolar con porcentaje
+ano_escolar_porcentaje <- calcular_porcentaje(datos, "año_escolar")
+grafico_año_escolar <- ggplot(ano_escolar_porcentaje, aes(x = factor(año_escolar), y = Porcentaje, fill = factor(año_escolar))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_brewer(palette = "Pastel1") +  # Colores pastel
+  labs(title = "Año Escolar", x = "Año Escolar", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+# Combinar los gráficos en un solo plot usando patchwork
+grafico_combinado <- grafico_tipo_b_tecnico + grafico_año_escolar + plot_layout(ncol = 2)
+grafico_combinado1 <- grafico_edad + grafico_genero + plot_layout(ncol = 2)
+
+# Mostrar el gráfico combinado
+print(grafico_combinado)
+print(grafico_combinado1)
+
+
+```
+.-
+
+## areaderesidencia
+```{r}
+# Calcular el porcentaje de cada categoría para 'area'
+area_porcentaje <- datos %>%
+  group_by(area) %>%
+  summarise(Frecuencia = n()) %>%
+  mutate(Porcentaje = (Frecuencia / sum(Frecuencia)) * 100)  # Calculamos el porcentaje en relación al total general
+
+# Calcular el porcentaje de cada categoría para 'ingreso'
+ingreso_porcentaje <- datos %>%
+  group_by(ingreso) %>%
+  summarise(Frecuencia = n()) %>%
+  mutate(Porcentaje = (Frecuencia / sum(Frecuencia)) * 100)  # Calculamos el porcentaje en relación al total general
+
+# Graficar Área con porcentaje
+grafico_area <- ggplot(area_porcentaje, aes(x = factor(area), y = Porcentaje, fill = factor(area))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel
+  labs(title = "Área", x = "Área", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+# Graficar Ingreso con porcentaje
+grafico_ingreso <- ggplot(ingreso_porcentaje, aes(x = factor(ingreso), y = Porcentaje, fill = factor(ingreso))) + 
+  geom_bar(stat = "identity") +  # Usamos stat = "identity" para mostrar el porcentaje calculado
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel
+  labs(title = "Ingreso", x = "Ingreso", y = "Porcentaje") +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, size = 3) +  # Mostrar los porcentajes encima de las barras
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 11),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none" )
+
+#Combinar los gráficos en un solo plot usando patchwork
+grafico_combinado_area_ingreso <- grafico_area + grafico_ingreso + plot_layout(ncol = 2)
+
+# Mostrar el gráfico combinado
+print(grafico_combinado_area_ingreso)
+
+```
+Grafico conbinado 
+
+
+
+# idiomas
+
+```{r}
+# Reemplazar la categoría "Inglés" por "Español Inglés"
+datos$idiomas <- as.factor(ifelse(datos$idiomas == "Inglés", "Español Inglés", as.character(datos$idiomas)))
+
+
+
+# Calcular proporciones
+datos_summary <- datos %>%
+  count(idiomas) %>%
+  mutate(percentage = n / sum(n) * 100)
+
+# Crear el gráfico
+ggplot(datos_summary, aes(x = idiomas, y = percentage, fill = idiomas)) +
+  geom_bar(stat = "identity", color = "white") +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), vjust = -0.5) + # Etiquetas con porcentajes
+  scale_fill_brewer(palette = "Set3") +  # Cambiar la paleta si lo prefieres
+  labs(
+    y = "Porcentaje"
+  ) +
+  theme_minimal()
+```
+
+
+# Intereses
+```{r Grafico sobre los intereses STEAM}
+
+str(datos[,15:29])
+
+
+# Selección de las variables dicotómicas (cambiado a 'variables_intereses')
+variables_intereses <- datos[,16:29]
+
+# Convertir las variables a formato largo para graficar varias variables en una sola grafica
+datos_largos <- variables_intereses %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Filtrar solo los valores 1
+datos_largos_1 <- datos_largos %>%
+  filter(Valor == 1)
+
+# Calcular las frecuencias de cada variable
+frecuencias <- datos_largos %>%
+  group_by(Variable) %>%
+  summarise(Frecuencia = sum(Valor), .groups = "drop")
+
+# numero de observaciones
+
+total_observaciones <- nrow(datos)
+
+# Calcular el porcentaje correctamente: (Frecuencia de cada variable / Total de observaciones) * 100
+frecuencias <- frecuencias %>%
+  mutate(Porcentaje = (Frecuencia / total_observaciones) * 100)
+
+# Definir el número de barras (variables)
+n_barras <- nrow(frecuencias)
+
+# Crear una paleta de colores utilizando 'RColorBrewer' y 'colorRampPalette'
+colores <- colorRampPalette(brewer.pal(9, "Paired"))(n_barras)
+
+# Crear el gráfico de barras con porcentajes sobre las barras
+ggplot(frecuencias, aes(x = Variable, y = Frecuencia, fill = factor(Variable))) +  
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = colores) +  # Aplicar los colores de la paleta
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, color = "black", size = 3) +  # Agregar porcentaje sobre las barras
+  labs(title = "Intereses STEAM",
+       x = "Variables",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "none"
+  )
+```
+
+
+
+# Habilidades
+
+
+```{r Grafico sobre las habilidades STEAM}
+
+# Selección de las variables dicotómicas (cambiado a 'variables_intereses')
+variables_habilidades <- datos[,31:41]
+
+# Convertir las variables a formato largo para graficar varias variables en una sola grafica
+datos_largosH <- variables_habilidades %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Filtrar solo los valores 1
+datos_largos_H <- datos_largosH %>%
+  filter(Valor == 1)
+
+# Calcular las frecuencias de cada variable
+frecuenciasHabilidades <- datos_largosH %>%
+  group_by(Variable) %>%
+  summarise(Frecuencia = sum(Valor), .groups = "drop")
+
+# numero de observaciones
+
+total_observaciones <- nrow(datos)
+
+# Calcular el porcentaje correctamente: (Frecuencia de cada variable / Total de observaciones) * 100
+frecuenciasHabilidades <- frecuenciasHabilidades %>%
+  mutate(Porcentaje = (Frecuencia / total_observaciones) * 100)
+
+# Definir el número de barras (variables)
+n_barras <- nrow(frecuenciasHabilidades)
+
+# Crear una paleta de colores utilizando 'RColorBrewer' y 'colorRampPalette'
+colores <- colorRampPalette(brewer.pal(9, "Paired"))(n_barras)
+
+# Crear el gráfico de barras con porcentajes sobre las barras para habilidades
+ggplot(frecuenciasHabilidades, aes(x = Variable, y = Frecuencia, fill = factor(Variable))) +  
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = colores) +  # Aplicar los colores de la paleta
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, color = "black", size = 3) +  # Agregar porcentaje sobre las barras
+  labs(title = "Habilidades STEAM",
+       x = "Variables",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "none"
+  )
+
+```
+
+
+# Intereses por sexo
+
+```{r}
+# Cargar librerías necesarias
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# bd para graficar los 2 grupos mas grandes
+datosparagraficar <-datos[-c(4,29, 115, 193,228,473,331), ]
+# Seleccionar las columnas de interés (16 a 29) y agregar la columna de género
+variables_intereses <- datosparagraficar[, 16:29]
+datos_con_genero <- cbind(variables_intereses, genero = datosparagraficar$genero)
+
+# Convertir las variables a formato largo
+datos_largos <- datos_con_genero %>%
+  gather(key = "Variable", value = "Interes", -genero) %>%
+  filter(!is.na(Interes) & Interes == 1)  # Excluir los NA y filtrar solo los valores con interés (Interes == 1)
+
+# Calcular la frecuencia de interés por género
+frecuencias_genero <- datos_largos %>%
+  group_by(Variable, genero) %>%
+  summarise(Frecuencia = n(), .groups = "drop")
+
+# Calcular el total de personas por género
+total_por_genero <- datos %>%
+  group_by(genero) %>%
+  summarise(Total = n(), .groups = "drop")
+
+# Unir las frecuencias con los totales por género para calcular el porcentaje
+frecuencias_genero <- frecuencias_genero %>%
+  left_join(total_por_genero, by = "genero") %>%
+  mutate(Porcentaje = (Frecuencia / Total) * 100)
+
+# Verificamos los resultados finales con los porcentajes
+print(frecuencias_genero)
+
+# Graficar las frecuencias por género y los porcentajes con colores pastel
+ggplot(frecuencias_genero, aes(x = Variable, y = Frecuencia, fill = genero)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Usar "dodge" para separar las barras por género
+  scale_fill_manual(values = c("Femenino" = "#FFB6C1", "Masculino" = "#ADD8E6")) +  # Colores pastel para las categorías
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), 
+            position = position_dodge(width = 0.8), vjust = -0.3, size = 2.3) +  # Mostrar los porcentajes encima de las barras
+  labs(title = "Intereses STEAM",
+       x = "Variable",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Girar y ajustar el tamaño de las etiquetas del eje X
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.title = element_blank(),
+    legend.position = "top",
+    axis.text.y = element_text(size = 10)
+  )
+
+
+
+# Verificación:
+
+mujeres <- datos %>%
+  filter(genero == "Femenino")
+
+# Calcular el número de mujeres con interés en 'i_ajedrez' (valor 1)
+interesh <- mujeres %>%
+  filter(i_herramientas == 1) %>%
+  nrow()
+
+# Mostrar el resultado
+interesh
+
+
+
+```
+dd
+
+
+
+
+## Habilidades por sexo
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+
+
+# Seleccionar las columnas de interés (16 a 29) y agregar la columna de género
+variables_intereses <- datosparagraficar[, 31:41]
+datos_con_genero <- cbind(variables_intereses, genero = datosparagraficar$genero)
+
+# Convertir las variables a formato largo
+datos_largos <- datos_con_genero %>%
+  gather(key = "Variable", value = "Interes", -genero) %>%
+  filter(!is.na(Interes) & Interes == 1)  # Excluir los NA y filtrar solo los valores con interés (Interes == 1)
+
+# Calcular la frecuencia de interés por género
+frecuencias_genero <- datos_largos %>%
+  group_by(Variable, genero) %>%
+  summarise(Frecuencia = n(), .groups = "drop")
+
+# Calcular el total de personas por género
+total_por_genero <- datos %>%
+  group_by(genero) %>%
+  summarise(Total = n(), .groups = "drop")
+
+# Unir las frecuencias con los totales por género para calcular el porcentaje
+frecuencias_genero <- frecuencias_genero %>%
+  left_join(total_por_genero, by = "genero") %>%
+  mutate(Porcentaje = (Frecuencia / Total) * 100)
+
+# Verificamos los resultados finales con los porcentajes
+print(frecuencias_genero)
+
+# Graficar las frecuencias por género y los porcentajes con colores pastel
+ggplot(frecuencias_genero, aes(x = Variable, y = Frecuencia, fill = genero)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Usar "dodge" para separar las barras por género
+  scale_fill_manual(values = c("Femenino" = "#FFB6C1", "Masculino" = "#ADD8E6")) +  # Colores pastel para las categorías
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), 
+            position = position_dodge(width = 0.8), vjust = -0.3, size = 2.3) +  # Mostrar los porcentajes encima de las barras
+  labs(title = "Habilidades STEAM",
+       x = "Variable",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Girar y ajustar el tamaño de las etiquetas del eje X
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.title = element_blank(),
+    legend.position = "top",
+    axis.text.y = element_text(size = 10)
+  )
+
+
+
+# Verificación:
+
+mujeres <- datos %>%
+  filter(genero == "Femenino")
+
+# Calcular el número de mujeres con interés en 'i_ajedrez' (valor 1)
+interesh <- mujeres %>%
+  filter(i_herramientas == 1) %>%
+  nrow()
+
+# Mostrar el resultado
+interesh
+
+
+
+```
+## Crear variable completa de intereses y habilidades
+
+
+```{r habilidades_steam}
+# Crear la nueva variable habilidades_steam sumando las columnas 31 a 41
+datos$habilidades_steam <- rowSums(datos[, 31:40], na.rm = TRUE)
+
+
+
+
+datos$intereses_steam <- rowSums(datos[, 16:28], na.rm = TRUE)
+summary(datos$intereses_steam)
+summary(datos$habilidades_steam)
+
+
+
+```
+
+
+```{r Grafico}
+library(ggplot2)
+
+# Crear el gráfico de dispersión diferenciado por género y con jittering para evitar la superposición
+grafico <- ggplot(datos, aes(x = habilidades_steam, y = intereses_steam, color = genero)) +
+  geom_jitter(size = 3, alpha = 0.9, width = 0.2, height = 0.2) +  # Jittering para evitar la superposición
+  labs(
+    title = "Relación entre Habilidades y Intereses STEAM por Género",
+    x = "Habilidades STEAM",
+    y = "Intereses STEAM",
+    color = "Género"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 12, color = "black"),
+    legend.position = "top",
+    legend.text = element_text(size = 12)
+  ) +scale_x_continuous(breaks = seq(min(datos$habilidades_steam), max(datos$habilidades_steam), by = 2)) +  # Ajuste de escala discreta en el eje X
+  scale_y_continuous(breaks = seq(min(datos$intereses_steam), max(datos$intereses_steam), by = 2)) +
+  scale_color_manual(values = c("Femenino" = "#FFB5C5", "Masculino" = "#4682B4", "Prefiero no decirlo" = "#32CD32", "No definido"="#FFD700" ))  # Colores vibrantes
+
+# Mostrar el gráfico
+print(grafico)
+
+```
+
+
+
+
+
+## Asignaturas:
+```{r}
+str(datos[42:50])
+```
+
+
+hh
+
+```{r}
+
+
+
+# Selección de las variables dicotómicas (cambiado a 'variables_intereses')
+variables_asignaturas <- datos[, 43:49]
+
+# Asegurarse de que todas las columnas sean factores
+variables_asignaturas <- variables_asignaturas %>%
+  mutate(across(everything(), as.factor))
+
+# Convertir las variables a formato largo para graficar varias variables en una sola gráfica
+datos_largos <- variables_asignaturas %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Filtrar solo los valores 1 (aquellos a los que se les asignó 1)
+datos_largos_1 <- datos_largos %>%
+  filter(Valor == 1)
+
+# Calcular las frecuencias de cada variable
+frecuencias <- datos_largos %>%
+  group_by(Variable) %>%
+  summarise(Frecuencia = sum(Valor == "1"), .groups = "drop")  # Filtrar correctamente para contar solo los 1
+
+# Número de observaciones totales por variable
+total_por_variable <- datos_largos %>%
+  group_by(Variable) %>%
+  summarise(Total = n(), .groups = "drop")  # Total de observaciones por variable
+
+# Unir las frecuencias con el total de observaciones
+frecuencias <- frecuencias %>%
+  left_join(total_por_variable, by = "Variable")
+
+# Calcular el porcentaje correctamente: (Frecuencia de cada variable / Total de observaciones) * 100
+frecuencias <- frecuencias %>%
+  mutate(Porcentaje = (Frecuencia / Total) * 100)
+
+# Definir el número de barras (variables)
+n_barras <- nrow(frecuencias)
+
+# Crear una paleta de colores utilizando 'RColorBrewer' y 'colorRampPalette'
+colores <- colorRampPalette(brewer.pal(9, "Paired"))(n_barras)
+
+# Crear el gráfico de barras con porcentajes sobre las barras
+ggplot(frecuencias, aes(x = Variable, y = Frecuencia, fill = factor(Variable))) +  
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = colores) +  # Aplicar los colores de la paleta
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, color = "black", size = 3) +  # Agregar porcentaje sobre las barras
+  labs(title = "Asignaturas STEAM",
+       x = "Variables",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "none"
+  )
+
+
+
+```
+
+## Probabilidad carrera steam
+
+```{r}
+# Calcular los porcentajes
+porcentajes <- prop.table(table(datos$elegir_carrera_steam)) * 100
+
+# Crear el gráfico de barras con porcentajes para la variable elegir_carrera_steam
+grafico_elegir_carrera_steam <- ggplot(data = as.data.frame(porcentajes), aes(x = Var1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel vibrantes
+  labs(
+    title = "Elección de Carrera STEAM",
+    x = "Probabilidad de elegir carrera STEAM",
+    y = "Porcentaje",
+    fill = "Elección"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 12, color = "black"),
+    legend.position = "none"
+  ) +
+  geom_text(aes(label = paste0(round(Freq, 1), "%")), vjust = -0.5)  # Añadir etiquetas con los porcentajes
+
+# Mostrar el gráfico
+print(grafico_elegir_carrera_steam)
+
+
+
+# Calcular los porcentajes por género
+porcentajes_genero <- prop.table(table(datos$elegir_carrera_steam, datos$genero), margin = 2) * 100
+
+# Convertir a un formato adecuado para ggplot
+porcentajes_genero_df <- as.data.frame(porcentajes_genero)
+colnames(porcentajes_genero_df) <- c("Elegir_Carrera_STEAM", "Genero", "Porcentaje")
+
+# Crear el gráfico de barras con porcentajes por género
+grafico_elegir_carrera_steam_genero <- ggplot(data = porcentajes_genero_df, aes(x = Elegir_Carrera_STEAM, y = Porcentaje, fill = Genero)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Usar position = "dodge" para barras separadas
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel vibrantes
+  labs(
+    title = "Elección de Carrera STEAM por Género",
+    x = "Probabilidad de elegir carrera STEAM",
+    y = "Porcentaje",
+    fill = "Género"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 12, color = "black"),
+    legend.position = "top"
+  ) +
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), position = position_dodge(0.9), vjust = -0.5)  # Añadir etiquetas con los porcentajes
+
+# Mostrar el gráfico
+print(grafico_elegir_carrera_steam_genero)
+
+
+```
+
+# Grafica obtaculos
+
+```{r}
+# Selección de las variables dicotómicas
+variables_obstaculos <- datos[,58:62]
+
+# Convertir las variables a formato largo para graficar varias variables en una sola gráfica
+datos_largosO <- variables_obstaculos %>%
+  pivot_longer(cols = everything(), names_to = "Variable", values_to = "Valor")
+
+# Filtrar solo los valores 1
+datos_largosO_1 <- datos_largosO %>%
+  filter(Valor == 1)
+
+# Calcular las frecuencias de cada variable
+frecuencias <- datos_largosO %>%
+  group_by(Variable) %>%
+  summarise(Frecuencia = sum(Valor), .groups = "drop")
+
+# numero de observaciones
+
+total_observaciones <- nrow(datos)
+
+# Calcular el porcentaje correctamente: (Frecuencia de cada variable / Total de observaciones) * 100
+frecuencias <- frecuencias %>%
+  mutate(Porcentaje = (Frecuencia / total_observaciones) * 100)
+
+# Definir el número de barras (variables)
+n_barras <- nrow(frecuencias)
+
+# Crear una paleta de colores utilizando 'RColorBrewer' y 'colorRampPalette'
+colores <- colorRampPalette(brewer.pal(9, "Paired"))(n_barras)
+
+# Crear el gráfico de barras con porcentajes sobre las barras
+ggplot(frecuencias, aes(x = Variable, y = Frecuencia, fill = factor(Variable))) +  
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = colores) +  # Aplicar los colores de la paleta
+  geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.3, color = "black", size = 3) +  # Agregar porcentaje sobre las barras
+  labs(title = "Obstaculos de estudiar una carrera STEAM",
+       x = "Variables",
+       y = "Frecuencia") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "none"
+  )
+
+```
+
+
+## Grafica sobre los otros obstaculos presentados
+
+
+
+```{r}
+datos_limpios <- datos[!is.na(datos$o_cual_otro), ]
+
+
+
+# Omitir solo los valores NA en la variable "o_cual_otro"
+datos_clean <- datos[!is.na(datos$o_cual_otro), ]
+
+# Calcular las frecuencias y agregar el porcentaje directamente en el gráfico
+ggplot(datos_limpios , aes(x = o_cual_otro, fill = o_cual_otro)) +
+  geom_bar(stat = "count") +  # Cuenta las ocurrencias de cada categoría
+  scale_fill_brewer(palette = "Set3") +  # Usar colores de RColorBrewer
+  theme_minimal() + 
+  labs(title = "Obtaculos ingresados en la categoria otro",
+       x = "Categoría", y = "Frecuencia") +
+  theme(legend.position = "none") +  # Ocultar la leyenda
+  geom_text(stat = "count", aes(label = paste0(round((..count..)/sum(..count..)*100, 1), "%")), 
+            vjust = -0.5, size = 3) +  # Agregar los porcentajes sobre las barras
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 13))
+
+
+```
+
+# Otras variable
+
+```{r}
+
+
+## BUCLE
+# Lista de variables categóricas, títulos y colores
+variables_categoricas <- list(
+  list(nombre = "sector_trabajo", titulo = "Sector de trabajo preferido", colores = "Pastel1"),
+  list(nombre = "q_influye_desicion", titulo = "Quién influye mas en su decisión", colores = "Pastel1"),
+  list(nombre = "maestros", titulo = "Influencia de los maestros", colores = "Pastel2"),
+  list(nombre = "amigos", titulo = "Influencia de los amigos", colores = "Pastel1"),
+  list(nombre = "apoyo", titulo = "Nivel de apoyo familiar", colores = "Set3")
+)
+
+
+# Crear gráficos para cada variable con títulos y colores distintos
+for (variable_info in variables_categoricas) {
+  
+  variable <- variable_info$nombre
+  titulo <- variable_info$titulo
+  colores <- variable_info$colores
+  
+  # Calcular las frecuencias y porcentajes
+  datos_frecuencia <- datos %>%
+    group_by(across(all_of(variable))) %>%
+    summarise(Frecuencia = n(), .groups = "drop") %>%
+    mutate(Porcentaje = (Frecuencia / sum(Frecuencia)) * 100)
+  
+  # Renombrar la columna para que ggplot la reconozca
+  colnames(datos_frecuencia)[1] <- "Categoria"
+  
+  # Crear el gráfico de barras
+  grafico <- ggplot(datos_frecuencia, aes(x = reorder(Categoria, -Porcentaje), y = Porcentaje, fill = Categoria)) +
+    geom_bar(stat = "identity", width = 0.7, show.legend = FALSE) +  # Ajustar ancho de las barras
+    geom_text(aes(label = paste0(round(Porcentaje, 1), "%")), vjust = -0.5, color = "black", size = 3.5) +
+    labs(title = titulo, x = "Categorías", y = "Porcentaje") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +  # Dar espacio adicional en el eje Y
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),  # Ajustar texto en eje X
+      axis.title.x = element_text(size = 12),
+      axis.title.y = element_text(size = 12),
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14)
+    ) +
+    scale_fill_brewer(palette = colores)  # Usar paleta de colores definida
+  
+  # Mostrar el gráfico en la consola
+  print(grafico)
+}
+
+
+```
+# que tan informADO estas:
+
+```{r}
+
+# Calcular los porcentajes
+porcentajes <- prop.table(table(datos$informado_steam)) * 100
+
+# Crear el gráfico
+ggplot(data = as.data.frame(porcentajes), aes(x = Var1, y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "Set3") +  # Selección de colores con RColorBrewer
+  labs(x = "Categoría", y = "Porcentaje", title = "Conocimiento sobre las carreras STEAM") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),  # Centrar el título
+    legend.position = "none"  # Eliminar la leyenda
+  ) +
+  geom_text(aes(label = paste0(round(Freq, 1), "%")), vjust = -0.5)  # Añadir etiquetas con los porcentajes
+
+
+
+
+```
+# CARRERA STEAM
+
+```{r}
+# Calcular la cantidad de estudiantes por género y elección de carrera STEAM
+tabla_genero_carrera_steam <- table(datos$carrera_steam, datos$genero)
+
+# Convertir la tabla a un formato adecuado para ggplot
+tabla_genero_carrera_steam_df <- as.data.frame(tabla_genero_carrera_steam)
+colnames(tabla_genero_carrera_steam_df) <- c("Eleccion_Carrera_STEAM", "Genero", "Cantidad")
+
+# Crear el gráfico de barras para carrera STEAM por género
+grafico_carrera_steam_genero <- ggplot(data = tabla_genero_carrera_steam_df, aes(x = Eleccion_Carrera_STEAM, y = Cantidad, fill = Genero)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Usar position = "dodge" para barras separadas
+  scale_fill_brewer(palette = "Pastel2") +  # Colores pastel vibrantes
+  labs(
+    title = "Elección de Carrera STEAM por Género",
+    x = "Elección de Carrera STEAM",
+    y = "Cantidad de Estudiantes",
+    fill = "Género"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 12, color = "black"),
+    axis.title = element_text(size = 12, color = "black"),
+    legend.position = "top"
+  ) +
+  geom_text(aes(label = Cantidad), position = position_dodge(0.9), vjust = -0.5)  # Añadir etiquetas con los valores
+
+# Mostrar el gráfico
+print(grafico_carrera_steam_genero)
+
+```
+
+
+
